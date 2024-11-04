@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>My experiment</title>
+  <script src="https://unpkg.com/jspsych@8.0.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-survey-text@2.0.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@2.0.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-audio-keyboard-response@2.0.0"></script>
+  <!-- load in the recall lists -->
+  <script src="stimuli/roediger_mcdermott_1995_appendix_word_list.js"></script>
+  <link href="https://unpkg.com/jspsych@8.0.0/css/jspsych.css" rel="stylesheet" type="text/css" />
+  <script src="https://unpkg.com/@jspsych/plugin-fullscreen@1.2.1"></script>
+</head>
+
+<body></body>
+<script>
+
+  /* initialize jsPsych */
+  var jsPsych = initJsPsych({
+    on_finish: function () {
+      jsPsych.data.displayData();
+    }
+  });
+
+  /* create timeline */
+  var timeline = [];
+
+  // Add a trial to enter fullscreen mode
+  var fullscreen_trial = {
+    type: jsPsychFullscreen,
+    fullscreen_mode: true
+  };
+  timeline.push(fullscreen_trial);
+
+
+  // Define welcome message trial
+  var welcome = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: "Welcome to the experiment. Press any key to begin."
+  };
+
+  // Add the welcome trial to the timeline variable
+  timeline.push(welcome);
+
+  // Get one of the lists and shuffle it
+  /* To-do: Determine how many lists are we gonna be used, if a lot, random or not.
+   * Need to have the record on which list is providing
+   * Need to add audio for each word present*/
+  // Totally 24 lists
+  var current_list = memory_lists[0];
+  var number_words_in_list = 15;
+  var wordArray = [];
+
+  // Create an array of words from the current list
+  for (let i = 1; i <= number_words_in_list; i++) {
+    wordArray.push(current_list["word_" + i]);
+  }
+
+  //Make the order of the words randomly
+  function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+      let j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
+  // Apply to the array
+  shuffleArray(wordArray);
+
+  for (let i = 0; i < wordArray.length; i++) {
+    var trial = {
+      type: jsPsychHtmlKeyboardResponse,
+      choices: [],
+      stimulus: wordArray[i],
+      trial_duration: 1000,
+      post_trial_gap: 1000,
+    }
+    timeline.push(trial);
+  }
+  // To-do: Responses from participants
+  // Click the words that may have seen ?
+  // Need to get every words response time, accuracy record
+
+  // Add a trial to exit fullscreen mode at the end of the experiment
+  var fullscreen_exit = {
+    type: jsPsychFullscreen,
+    fullscreen_mode: false
+  };
+  timeline.push(fullscreen_exit);
+
+  /* start the experiment */
+  jsPsych.run(timeline);
+
+</script>
+
+</html>
