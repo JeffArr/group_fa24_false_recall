@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>My experiment</title>
+  <script src="https://unpkg.com/jspsych@8.0.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-survey-text@2.0.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@2.0.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-audio-keyboard-response@2.0.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-survey-likert@1.1.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-survey-text@2.0.0"></script>
+  <!-- load in the recall lists -->
+  <script src="stimuli/roediger_mcdermott_1995_appendix_word_list.js"></script>
+  <link href="https://unpkg.com/jspsych@8.0.0/css/jspsych.css" rel="stylesheet" type="text/css" />
+  <script src="https://unpkg.com/@jspsych/plugin-fullscreen@1.2.1"></script>
+  <!-- This is for data storage - please be sure to keep this script in all future updates to the code!! -->
+  <script src="https://unpkg.com/@jspsych-contrib/plugin-pipe"></script>
+</head>
+
+<body></body>
+<script>
+
+// Initialize jsPsych
+var jsPsych = initJsPsych({
+  on_finish: function () {
+    jsPsych.data.displayData();
+  }
+});
+
+// Shuffle function
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+// 6 lists of 12-words
+var memory_lists = [
+  { "List Name": "Anger", "words": ["mad", "fear", "hate", "rage", "temper", "fury", "ire", "wrath", "happy", "fight", "hatred", "mean"], "critical_lure": "anger" },
+  { "List Name": "Black", "words": ["white", "dark", "cat", "charred", "night", "funeral", "color", "grief", "blue", "death", "ink", "bottom"], "critical_lure": "black" },
+  { "List Name": "Bread", "words": ["butter", "food", "eat", "sandwich", "rye", "jam", "milk", "flour", "jelly", "dough", "crust", "slice"], "critical_lure": "bread" },
+  { "List Name": "Chair", "words": ["table", "sit", "legs", "seat", "couch", "desk", "recliner", "sofa", "wood", "cushion", "swivel", "stool"], "critical_lure": "chair" },
+  { "List Name": "Cold", "words": ["hot", "snow", "warm", "winter", "ice", "wet", "frigid", "chilly", "heat", "weather", "freeze", "air"], "critical_lure": "cold" },
+  { "List Name": "Doctor", "words": ["nurse", "sick", "lawyer", "medicine", "health", "hospital", "dentist", "physician", "ill", "patient", "office", "stethoscope"], "critical_lure": "doctor" }
+];
+
+// Shuffle the order of the 6 lists
+memory_lists = shuffleArray(memory_lists);
+
+var timeline = [];
+
+ // Add a trial to enter fullscreen mode
+ var fullscreen_trial = {
+    type: jsPsychFullscreen,
+    fullscreen_mode: true
+  };
+  timeline.push(fullscreen_trial);
+
+
+  // Define welcome message trial
+  var welcome = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: "Welcome to the Fasle Recall Experiment.</p><p>You will see 6 lists of 12-words presented one at a time. Try to remember as many as you can.</p><p>After the list, you’ll be asked to complete a recognition test.</p><p>Press any key to begin.</p>"
+  };
+
+  // Add the welcome trial to the timeline variable
+  timeline.push(welcome);
+
+  // create a short survey to collect a participant identifier
+  var participant_id_entry = {
+    type: jsPsychSurveyText,
+    questions: [{ prompt: "Please enter your participant ID (e.g. p1):", name: "participant_id" }],
+    on_finish: function (data) {
+      console.log(data.response)
+      jsPsych.data.addProperties({
+        participant: data.response.participant_id
+      });
+    }
+  };
+
+  // add participant_id_entry to timeline
+  timeline.push(participant_id_entry);
+
+// Loop through each randomized list
+for (let listIndex = 0; listIndex < memory_lists.length; listIndex++) {
+  let current_list = memory_lists[listIndex];
+  let words = shuffleArray([...current_list.words]);
+
+  // Instructions before each list
+  timeline.push({
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `<h3>List ${listIndex + 1} </h3>`,
+    choices: "NO_KEYS",
+    trial_duration: 2000
+  });
+
+  // NEED AUDIO FOR THE FIRST 6 LISTs + MAKE SURE THE AUDIO WORKS 
+  // Present each word with audio
+  for (let i = 0; i < words.length; i++) {
+    let word = words[i];
+    let audioFilePath = `Audio/${current_list["List Name"]}/word_${i + 1}.wav`;
+
+    timeline.push({
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: a`<p>${word}</p>`,
+      choices: "NO_KEYS",
+      trial_duration: 1500,
+      on_start: function () {
+        let audio = new Audio(audioFilePath);
+        audio.play();
+      }
+    });
+  }
+}
+
+// Instructions before recognition test
+timeline.push({
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: "Now you will rate your confidence that each word occurred on the list. <p>Please indicate whether you think the word was definitely new, probably new, probably old, or definitely old.</p> <p>Press any key to continue.</P>"
+
+});
+
+// Prepare recognition test with 42 items
+var recognition_words = [];
+for (let list of memory_lists) {
+  recognition_words.push(list.critical_lure);
+}
+
+// Select 2 random words from each list
+for (let list of memory_lists) {
+  recognition_words = recognition_words.concat(shuffleArray(list.words).slice(0, 2));
+}
+
+// DECIDE ON THE 12 UNRELATED AND 12 WEAK RELATED WORDS
+var unrelated_words = ["uncle", "airplane", "music", "friend", "delay", "sharp", "king", "mountain", "book", "sleep", "cup", "hat"];
+var weakly_related_words = ["computer", "shadow", "butterfly", "shoe", "building", "laugh", "tree", "bed", "dog", "sweet", "fluffy", "light"];
+recognition_words = recognition_words.concat(unrelated_words, weakly_related_words);
+recognition_words = shuffleArray(recognition_words);
+
+// Create recognition trials
+var recognition_trials = recognition_words.map(function (word) {
+  return {
+    type: jsPsychSurveyLikert,
+    questions: [{
+      prompt: `Did you see the word "${word}"?`,
+      labels: ["Definitely New", "Probably New", "Probably Old", "Definitely Old"],
+      required: true
+    }
+  ],
+  scale_width: 600,
+      data: { word: typeof word === 'object' ? word.word : word, type: "recognition" }, // save word
+      on_finish: function (data) {
+        //store response data with word information
+        console.log("Response:", data.response);
+        console.log("Word:", data.response_word);
+      }
+  };
+});
+timeline.push(...recognition_trials)
+
+ // Added survey questions at the end of the experiment
+ var survey = {
+    type: jsPsychSurveyText,
+    questions: [
+    { prompt: "Please enter your age:", name: "age", required: true, row: 2, columns:20 },
+    { prompt: "What is your gender?", name: "gender", required: true, row: 2, columns:20 },
+      { prompt: "What do you think is the purpose of this experiment?", rows: 5, columns: 40 },
+      { prompt: "Were there any techical problems during the experiment?", rows: 5, columns: 40 },
+    ],
+    post_trial_gap: 500
+  };
+  timeline.push(survey);
+
+
+// add a debriefing trail to explain the purpose of the experiment.
+var debriefing_trial = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `
+      <h2>Thank You for Participating!</h2>
+      <p>Your contribution is valuable to our research.</p>
+      <p>The purpose of this experiment was to investigate memory recognition and the phenomenon of false memories. </p>
+      <p>Specifically, we were interested in how individuals are to falsely recall words that are not present in the stimulus but are associated with studied material.</p>
+      <p>Press any key to finish the experiment.</p>
+    `
+  };
+  timeline.push(debriefing_trial);
+
+// Exit fullscreen mode
+timeline.push({ type: jsPsychFullscreen, fullscreen_mode: false });
+
+// Run the experiment
+jsPsych.run(timeline);
+
+</script>
+
+</html>
