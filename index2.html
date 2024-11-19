@@ -104,7 +104,7 @@ for (let listIndex = 0; listIndex < memory_lists.length; listIndex++) {
 
     timeline.push({
       type: jsPsychHtmlKeyboardResponse,
-      stimulus: a`<p>${word}</p>`,
+      stimulus: `<p>${word}</p>`,
       choices: "NO_KEYS",
       trial_duration: 1500,
       on_start: function () {
