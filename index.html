@@ -20,14 +20,46 @@
 <body></body>
 <script>
 
-  /* initialize jsPsych */
+  // Initialize jsPsych
   var jsPsych = initJsPsych({
     on_finish: function () {
       jsPsych.data.displayData();
     }
   });
 
-  /* create timeline */
+  // Shuffle function
+  function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
+
+  //audio
+  function speak(text) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
+    utterance.pitch = 1;
+    utterance.rate = 1;
+    utterance.volume = 1;
+    window.speechSynthesis.speak(utterance);
+  }
+
+
+  // 6 lists of 12-words
+  var memory_lists = [
+    { "List Name": "Anger", "words": ["mad", "fear", "hate", "rage", "temper", "fury", "ire", "wrath", "happy", "fight", "hatred", "mean"], "critical_lure": "anger" },
+    { "List Name": "Black", "words": ["white", "dark", "cat", "charred", "night", "funeral", "color", "grief", "blue", "death", "ink", "bottom"], "critical_lure": "black" },
+    { "List Name": "Bread", "words": ["butter", "food", "eat", "sandwich", "rye", "jam", "milk", "flour", "jelly", "dough", "crust", "slice"], "critical_lure": "bread" },
+    { "List Name": "Chair", "words": ["table", "sit", "legs", "seat", "couch", "desk", "recliner", "sofa", "wood", "cushion", "swivel", "stool"], "critical_lure": "chair" },
+    { "List Name": "Cold", "words": ["hot", "snow", "warm", "winter", "ice", "wet", "frigid", "chilly", "heat", "weather", "freeze", "air"], "critical_lure": "cold" },
+    { "List Name": "Doctor", "words": ["nurse", "sick", "lawyer", "medicine", "health", "hospital", "dentist", "physician", "ill", "patient", "office", "stethoscope"], "critical_lure": "doctor" }
+  ];
+
+  // Shuffle the order of the 6 lists
+  memory_lists = shuffleArray(memory_lists);
+
   var timeline = [];
 
   // Add a trial to enter fullscreen mode
@@ -41,7 +73,7 @@
   // Define welcome message trial
   var welcome = {
     type: jsPsychHtmlKeyboardResponse,
-    stimulus: "Welcome to the Fasle Recall Experiment.</p><p>You will see a list of words presented one at a time. Try to remember as many as you can.</p><p>After the list, you’ll be tested on recall and recognition.</p><p>Press any key to begin.</p>"
+    stimulus: "Welcome to the Fasle Recall Experiment.</p><p>You will see 6 lists of 12-words presented one at a time. Try to remember as many as you can.</p><p>After the list, you’ll be asked to complete a recognition test.</p><p>Press any key to begin.</p>"
   };
 
   // Add the welcome trial to the timeline variable
@@ -62,132 +94,71 @@
   // add participant_id_entry to timeline
   timeline.push(participant_id_entry);
 
-  //PLEASE KEEP FOR ALL FUTURE ITERATIONS
-  //create a unique filename by combining a random string and a millisecond counter (to avoid duplicates)
-  var random_id = jsPsych.randomization.randomID(10);
-  const date = new Date();
-  random_id = "p"+random_id.toString();
-  var file_id = random_id + "_" + date.getTime().toString();
-  const filename = `${file_id}.csv`;
-  //also store the random id for convenience
-  jsPsych.data.addProperties({
-        random_id: random_id,
-      });
-  //PLEASE KEEP FOR ALL FUTURE ITERATIONS
+  // Loop through each randomized list
+  for (let listIndex = 0; listIndex < memory_lists.length; listIndex++) {
+    let current_list = memory_lists[listIndex];
+    let words = shuffleArray([...current_list.words]);
 
-  //create a fixation cross
-  var fixation = {
-    type: jsPsychHtmlKeyboardResponse,
-    stimulus: '<div style="font-size:60px;">+</div>',
-    choices: "NO_KEYS",
-    trial_duration: 1000,
-  };
-
-  // Get one of the lists and shuffle it
-  /* To-do: Determine how many lists are we gonna be used, if a lot, random or not.
-   * Need to have the record on which list is providing
-   * Need to add audio for each word present*/
-  // Totally 24 lists
-  var current_list = memory_lists[0];
-  var number_words_in_list = 15;
-  var wordArray = [];
-
-  // Create an array of words objects containing both the text and audio file name
-  for (let i = 1; i <= number_words_in_list; i++) {
-    wordArray.push({
-      word: current_list["word_" + i],
-      audioFilePath: `Audio/${current_list["List Name"]}/word_${i}.wav`
-    });
-  }
-
-  //Make the order of the words randomly
-  function shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-      let j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]];
-    }
-    return array;
-  }
-  // Apply to the array
-  shuffleArray(wordArray);
-
-  // Create trials with audio playback
-  for (let i = 0; i < wordArray.length; i++) {
-    var trial = {
+    // Instructions before each list
+    timeline.push({
       type: jsPsychHtmlKeyboardResponse,
-      choices: [],
-      stimulus: `<p>${wordArray[i].word}</p>`,
-      trial_duration: 1000,
-      post_trial_gap: 1000,
-      on_start: function () {
-        // Play the corresponding audio file
-        var audio = new Audio(wordArray[i].audioFilePath);
-        audio.play();
-      }
-    };
-    timeline.push(fixation, trial);
-  }
-  //RECALL TEST
-  // To-do: Responses from participants
-  // Click the words that may have seen ?
-  // Need to get every words response time, accuracy record
+      stimulus: `<h3>List ${listIndex + 1} </h3>`,
+      choices: "NO_KEYS",
+      trial_duration: 2000
+    });
 
-  var recall_trial = {
-    type: jsPsychSurveyText,
-    questions: [
-      {
-        prompt: "Please type as many words as you remember from the list, starting from the last few items, then the rest of the words in any order.",
-        rows: 10,
-        columns: 50
-      }
-    ]
-  };
-  timeline.push(recall_trial);
+    // Todo：NEED AUDIO FOR THE FIRST 6 LISTs + MAKE SURE THE AUDIO WORKS
+    // Present each word with audio
+    for (let i = 0; i < words.length; i++) {
+      let word = words[i];
+      //Todo: Present the audio
 
-  //RECOGNITION TEST 
-  //To do - find a way to collect participants's responses
-
-  // Select a few words randomly from the presented list for the recognition test
-  function selectRandomWords(array, num) {
-    let selectedWords = [];
-    while (selectedWords.length < num) {
-      let word = array[Math.floor(Math.random() * array.length)];
-      if (!selectedWords.includes(word)) {
-        selectedWords.push(word);
-      }
+      timeline.push({
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: `<p>${word}</p>`,
+        choices: "NO_KEYS",
+        trial_duration: 1500,
+        on_load: function() {
+          speak(word);
+        }
+      });
     }
-    return selectedWords;
+
   }
 
-  var instruction_trial = {
+  // Instructions before recognition test
+  timeline.push({
     type: jsPsychHtmlKeyboardResponse,
     stimulus: "Now you will rate your confidence that each word occurred on the list. <p>Please indicate whether you think the word was definitely new, probably new, probably old, or definitely old.</p> <p>Press any key to continue.</P>"
-  };
 
-  // Add the instruction trial to the timeline
-  timeline.push(instruction_trial);
-  // Randomized the 15 words from the presented list for recognition test
-  var selected_recognition_words = selectRandomWords(wordArray, 15);
+  });
 
-  // Add "Anger" as the only false recognition item
-  var recognition_words = [
-    ...selected_recognition_words,
-    "Anger" // Not in the list, to test false recognition
-  ];
+  // Prepare recognition test with 42 items
+  var recognition_words = [];
+  for (let list of memory_lists) {
+    recognition_words.push(list.critical_lure);
+  }
 
-  // Shuffle the recognition words array
+  // Select 2 random words from each list
+  for (let list of memory_lists) {
+    recognition_words = recognition_words.concat(shuffleArray(list.words).slice(0, 2));
+  }
+
+  // DECIDE ON THE 12 UNRELATED AND 12 WEAK RELATED WORDS
+  var unrelated_words = ["uncle", "airplane", "music", "friend", "delay", "sharp", "king", "mountain", "book", "sleep", "cup", "hat"];
+  var weakly_related_words = ["computer", "shadow", "butterfly", "shoe", "building", "laugh", "tree", "bed", "dog", "sweet", "fluffy", "light"];
+  recognition_words = recognition_words.concat(unrelated_words, weakly_related_words);
   recognition_words = shuffleArray(recognition_words);
 
   // Create recognition trials
   var recognition_trials = recognition_words.map(function (word) {
     return {
       type: jsPsychSurveyLikert,
-      questions: [
-        {
-          prompt: `Did you see the word "${typeof word === 'object' ? word.word : word}"?`,
-          labels: ["Definitely New", "Probably New", "Probably Old", "Definitely Old"],
-          required: true,
-        }
+      questions: [{
+        prompt: `Did you see the word "${word}"?`,
+        labels: ["Definitely New", "Probably New", "Probably Old", "Definitely Old"],
+        required: true
+      }
       ],
       scale_width: 600,
       data: { word: typeof word === 'object' ? word.word : word, type: "recognition" }, // save word
@@ -198,12 +169,14 @@
       }
     };
   });
-  timeline.push(...recognition_trials);
+  timeline.push(...recognition_trials)
 
   // Added survey questions at the end of the experiment
   var survey = {
     type: jsPsychSurveyText,
     questions: [
+      { prompt: "Please enter your age:", name: "age", required: true, row: 2, columns:20 },
+      { prompt: "What is your gender?", name: "gender", required: true, row: 2, columns:20 },
       { prompt: "What do you think is the purpose of this experiment?", rows: 5, columns: 40 },
       { prompt: "Were there any techical problems during the experiment?", rows: 5, columns: 40 },
     ],
@@ -211,17 +184,6 @@
   };
   timeline.push(survey);
 
-  //PLEASE KEEP FOR ALL FUTURE ITERATIONS
-  //this portion of the code ensures that the data gets sent to be stored on OSF
-  const save_data = {
-    type: jsPsychPipe,
-    action: "save",
-    experiment_id: "Cti2D7wKXWPe",
-    filename: filename,
-    data_string: () => jsPsych.data.get().csv()
-  };
-  timeline.push(save_data);
-  //PLEASE KEEP FOR ALL FUTURE ITERATIONS
 
   // add a debriefing trail to explain the purpose of the experiment.
   var debriefing_trial = {
@@ -236,14 +198,10 @@
   };
   timeline.push(debriefing_trial);
 
-  // Add a trial to exit fullscreen mode at the end of the experiment
-  var fullscreen_exit = {
-    type: jsPsychFullscreen,
-    fullscreen_mode: false
-  };
-  timeline.push(fullscreen_exit);
+  // Exit fullscreen mode
+  timeline.push({ type: jsPsychFullscreen, fullscreen_mode: false });
 
-  /* start the experiment */
+  // Run the experiment
   jsPsych.run(timeline);
 
 </script>
